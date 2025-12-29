@@ -96,18 +96,75 @@ function checkAnswer(clickedBtn, selectedIdx, correctIdx, explanation) {
     document.getElementById('next-btn').classList.remove('hidden');
 }
 
+// ... (위쪽 코드는 동일) ...
+
+// [수정] 다음 문제 함수 (alert 제거)
 function nextQuestion() {
     if (currentIndex < currentQuestions.length - 1) {
         currentIndex++;
         renderQuestion();
     } else {
-        // 결과 화면 (Alert로 간단 처리 후 홈으로)
-        alert(`평가 종료!\n당신의 점수는 ${score} / ${currentQuestions.length} 점 입니다.`);
-        goHome();
+        // 퀴즈 종료 -> 결과 화면 표시
+        showResult();
     }
 }
 
+// [신규] 결과 화면 표시 함수
+function showResult() {
+    document.getElementById('quiz-screen').classList.add('hidden');
+    document.getElementById('result-screen').classList.remove('hidden');
+
+    const total = currentQuestions.length;
+    const percentage = (score / total) * 100;
+    
+    // 점수 표시
+    document.getElementById('final-score').innerText = score;
+    document.querySelector('.total-score').innerText = `/ ${total}`;
+
+    // 점수에 따른 메시지와 스타일 설정
+    const messageEl = document.getElementById('result-message');
+    const commentEl = document.getElementById('result-comment');
+    const iconEl = document.getElementById('result-icon');
+    const circle = document.querySelector('.score-circle');
+
+    // AIDA 기준 (75% 이상 합격으로 가정)
+    if (percentage >= 90) {
+        messageEl.innerText = "Master Diver!";
+        commentEl.innerText = "완벽합니다! 이론은 마스터하셨네요.";
+        iconEl.className = "fa-solid fa-trophy";
+        iconEl.style.color = "#ffd700"; // Gold
+        circle.style.borderColor = "#ffd700"; 
+    } else if (percentage >= 75) {
+        messageEl.innerText = "Passed (합격)";
+        commentEl.innerText = "축하합니다! 기준 점수를 통과했습니다.";
+        iconEl.className = "fa-solid fa-medal";
+        iconEl.style.color = "#00e676"; // Green
+        circle.style.borderColor = "#00e676";
+    } else {
+        messageEl.innerText = "Try Again";
+        commentEl.innerText = "조금 더 공부가 필요합니다. 다시 도전해보세요!";
+        iconEl.className = "fa-solid fa-person-drowning"; // 물에 빠진 아이콘..ㅎㅎ
+        iconEl.style.color = "#ff5252"; // Red
+        circle.style.borderColor = "#ff5252";
+    }
+}
+
+// [신규] 다시 풀기
+function restartQuiz() {
+    // 현재 레벨 그대로 다시 시작
+    score = 0;
+    currentIndex = 0;
+    // 문제 다시 섞기
+    currentQuestions.sort(() => Math.random() - 0.5);
+    
+    document.getElementById('result-screen').classList.add('hidden');
+    document.getElementById('quiz-screen').classList.remove('hidden');
+    renderQuestion();
+}
+
+// [수정] 홈으로 가기 (모든 화면 초기화)
 function goHome() {
     document.getElementById('quiz-screen').classList.add('hidden');
+    document.getElementById('result-screen').classList.add('hidden');
     document.getElementById('home-screen').classList.remove('hidden');
 }

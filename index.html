@@ -102,6 +102,35 @@
                 </button>
             </div>
 
+            <div id="result-screen" class="hidden fade-in text-center">
+                <div class="result-icon-area">
+                    <i id="result-icon" class="fa-solid fa-trophy"></i>
+                </div>
+                
+                <h2 class="result-title">EVALUATION COMPLETE</h2>
+                <p class="result-subtitle">당신의 최종 성적입니다</p>
+
+                <div class="score-container">
+                    <div class="score-circle">
+                        <span id="final-score">0</span>
+                        <span class="total-score">/ 0</span>
+                    </div>
+                </div>
+
+                <div class="message-box">
+                    <h3 id="result-message">Excellent!</h3>
+                    <p id="result-comment">이론 마스터 수준입니다.</p>
+                </div>
+
+                <div class="result-actions">
+                    <button onclick="restartQuiz()" class="restart-btn">
+                        <i class="fa-solid fa-rotate-right"></i> 다시 풀기
+                    </button>
+                    <button onclick="goHome()" class="home-btn">
+                        <i class="fa-solid fa-house"></i> 홈으로
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

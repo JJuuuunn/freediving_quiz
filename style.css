@@ -154,3 +154,94 @@ body {
     transition: transform 0.2s;
 }
 .btn-next:hover { transform: translateY(-2px); }
+
+/* --- 결과 화면 (Result Screen) --- */
+#result-screen {
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.result-icon-area {
+    font-size: 50px;
+    margin-bottom: 20px;
+    color: var(--neon-blue);
+    text-shadow: 0 0 20px rgba(0, 242, 255, 0.6);
+    animation: floatIcon 3s ease-in-out infinite;
+}
+
+@keyframes floatIcon {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.result-title {
+    font-size: 24px; font-weight: 800; margin: 0;
+    background: linear-gradient(to right, #fff, #b0c4de);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 2px;
+}
+.result-subtitle { color: var(--text-gray); font-size: 14px; margin-top: 5px; margin-bottom: 30px; }
+
+/* 점수 원형 디자인 */
+.score-container { position: relative; width: 160px; height: 160px; margin-bottom: 30px; }
+
+.score-circle {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+/* 점수 테두리에 네온 효과 (JS로 색상 변경 가능하게 기본값 설정) */
+.score-circle::before {
+    content: ''; position: absolute;
+    top: -4px; left: -4px; right: -4px; bottom: -4px;
+    border-radius: 50%;
+    border: 4px solid transparent;
+    border-top-color: var(--neon-blue);
+    border-right-color: var(--neon-blue);
+    transform: rotate(-45deg);
+    animation: spinCircle 2s cubic-bezier(0.1, 0.7, 1.0, 0.1) forwards; /* 로딩 느낌 */
+}
+
+@keyframes spinCircle { from { transform: rotate(-45deg); } to { transform: rotate(315deg); } }
+
+#final-score { font-size: 56px; font-weight: 900; color: white; line-height: 1; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+.total-score { font-size: 16px; color: var(--text-gray); margin-top: 5px; }
+
+/* 메시지 박스 */
+.message-box {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 15px 30px;
+    margin-bottom: 30px;
+    border: 1px solid var(--glass-border);
+    width: 100%;
+}
+#result-message { font-size: 20px; font-weight: 700; margin: 0 0 5px 0; color: var(--neon-blue); }
+#result-comment { font-size: 14px; color: #ddd; margin: 0; }
+
+/* 버튼 그룹 */
+.result-actions { display: flex; gap: 10px; width: 100%; }
+.restart-btn, .home-btn {
+    flex: 1;
+    padding: 15px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: 0.2s;
+}
+.restart-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: white; }
+.restart-btn:hover { background: rgba(255,255,255,0.1); }
+
+.home-btn { background: var(--neon-blue); color: #0f2027; box-shadow: 0 0 15px rgba(0, 242, 255, 0.3); }
+.home-btn:hover { background: white; }
