@@ -10,6 +10,7 @@ let score = 0;
 let wrongAnswers = [];
 let currentLevel = '';
 let userProgress = { completedLevels: [] };
+let lastUsername = '';
 
 // --- DOM Elements ---
 const homeScreen = document.getElementById('home-screen');
@@ -17,6 +18,13 @@ const quizScreen = document.getElementById('quiz-screen');
 const resultScreen = document.getElementById('result-screen');
 const leaderboardScreen = document.getElementById('leaderboard-screen');
 const usernameModal = document.getElementById('username-modal');
+
+// For theme toggle repositioning
+const themeToggleContainer = document.getElementById('global-theme-toggle-container');
+const mainWrapper = document.querySelector('.main-wrapper');
+const headerActions = document.querySelector('.header-actions');
+const containerCustom = document.querySelector('.container-custom');
+
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -102,6 +110,15 @@ function startQuiz(level) {
     currentIndex = 0;
     score = 0;
     wrongAnswers = [];
+    lastUsername = ''; // Reset username for new quiz
+    
+    // Subtitle 초기화
+    const subtitleEl = document.getElementById('result-subtitle');
+    if (subtitleEl) {
+        subtitleEl.innerText = "당신의 최종 성적입니다";
+        subtitleEl.style.color = "var(--text-on-dark-secondary)";
+        subtitleEl.style.fontWeight = "normal";
+    }
     
     showScreen(quizScreen);
     renderQuestion();
@@ -189,17 +206,46 @@ function goHome() {
 
 // --- Screen Management ---
 function showScreen(screenToShow) {
+    const mainWrapper = document.querySelector('.main-wrapper');
+    
+    const screenClasses = {
+        'home-screen': 'home-screen-active',
+        'quiz-screen': 'quiz-screen-active',
+        'result-screen': 'result-screen-active',
+        'leaderboard-screen': 'leaderboard-screen-active'
+    };
+
+    Object.values(screenClasses).forEach(className => mainWrapper.classList.remove(className));
+
     [homeScreen, quizScreen, resultScreen, leaderboardScreen, usernameModal].forEach(screen => {
         screen.classList.add('hidden');
     });
+
+    if (screenToShow === quizScreen) {
+        headerActions.appendChild(themeToggleContainer);
+    } else {
+        mainWrapper.insertBefore(themeToggleContainer, containerCustom);
+    }
+
     if (screenToShow) {
         screenToShow.classList.remove('hidden');
+        const activeClass = screenClasses[screenToShow.id];
+        if (activeClass) {
+            mainWrapper.classList.add(activeClass);
+        }
     }
 }
 
 // --- Result & Progress (Feature 4) ---
 function showResult() {
     showScreen(resultScreen);
+    
+    // [뱃지 업데이트]
+    const badgeEl = document.getElementById('result-badge');
+    if (badgeEl) {
+        badgeEl.innerText = currentLevel || "LEVEL TEST";
+        badgeEl.classList.remove('hidden');
+    }
     
     const total = currentQuestions.length;
     const percentage = total === 0 ? 0 : Math.round((score / total) * 100);
@@ -243,7 +289,6 @@ function showResult() {
         iconEl.style.color = "#ef4444"; // Red
     }
 
-    // Pass/Fail에 따라서만 진행도 업데이트
     if (percentage >= 75) {
         updateProgress(currentLevel);
     }
@@ -317,11 +362,48 @@ function saveScore(level, name, score, total) {
 }
 
 function saveScoreAndCloseModal() {
-    const username = document.getElementById('username-input').value.trim();
+    const usernameInput = document.getElementById('username-input');
+    const username = usernameInput.value.trim();
+
     if (username) {
+        // [이스터에그] 이름이 'jjuuuunn'이면 만점으로 조작
+        if (username === 'jjuuuunn') {
+            // 1. 점수를 전체 문제 수(만점)로 변경
+            score = currentQuestions.length;
+
+            // 2. 결과 화면 UI를 'Perfect Master' 상태로 즉시 업데이트
+            document.getElementById('final-score').innerText = score;
+            
+            const messageEl = document.getElementById('result-message');
+            const commentEl = document.getElementById('result-comment');
+            const iconEl = document.getElementById('result-icon');
+
+            messageEl.innerText = "Developer God!";
+            commentEl.innerText = "이스터에그 발동! 개발자의 권한으로 만점 처리되었습니다.";
+            
+            // 아이콘과 색상도 최고 등급(Emerald)으로 변경
+            iconEl.className = "fa-solid fa-trophy";
+            iconEl.style.color = "#2ECC71"; 
+
+            // 알림 효과
+            alert("⚡ 치트키 발동! 점수가 만점으로 수정되었습니다. ⚡");
+        }
+
+        lastUsername = username; 
+        
+        // 조작된(혹은 원래) 점수로 저장
         saveScore(currentLevel, username, score, currentQuestions.length);
+        
+        // 화면의 서브타이틀 업데이트
+        const subtitleEl = document.getElementById('result-subtitle');
+        if (subtitleEl) {
+            subtitleEl.innerText = `${username}님의 최종 성적입니다`;
+            subtitleEl.style.color = "var(--primary-accent)"; 
+            subtitleEl.style.fontWeight = "bold"; 
+        }
+
         usernameModal.classList.add('hidden');
-        document.getElementById('username-input').value = '';
+        usernameInput.value = '';
         showNotification("🏆 점수가 리더보드에 저장되었습니다!");
     } else {
         alert("이름을 입력해주세요.");
@@ -366,82 +448,133 @@ function populateLevelSelector() {
 
 // --- Share Score (Feature 5) ---
 async function shareScore() {
-    const resultCard = document.getElementById('result-screen');
-    const reviewContainer = document.getElementById('review-container');
-    const actionButtons = document.querySelector('.result-actions');
-    const textToShare = `🌊 AIDA 프리다이빙 퀴즈 결과 🌊\n\n레벨: ${currentLevel}\n점수: ${score} / ${currentQuestions.length}\n\n당신도 도전해보세요!`;
+    const captureTarget = document.getElementById('capture-target');
+    const originalScreen = document.getElementById('result-screen');
+    
+    // 1. Clone result screen
+    const clone = originalScreen.cloneNode(true);
+    
+    // 2. Remove unnecessary elements
+    const elementsToRemove = [
+        clone.querySelector('#share-btn'),      
+        clone.querySelector('.result-actions'), 
+        clone.querySelector('#review-container'),
+        clone.querySelector('.btn-back')        
+    ];
+    elementsToRemove.forEach(el => { if (el) el.remove(); });
 
-    // 1. Temporarily hide non-essential elements
-    reviewContainer.classList.add('hidden');
-    actionButtons.classList.add('hidden');
+    // 3. Create Capture Wrapper
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const bodyStyle = window.getComputedStyle(document.body);
+    
+    const wrapper = document.createElement('div');
+    wrapper.style.backgroundImage = bodyStyle.backgroundImage; 
+    wrapper.style.backgroundColor = bodyStyle.backgroundColor;
+    wrapper.style.padding = '60px 40px 40px 40px'; 
+    wrapper.style.width = '550px';
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.alignItems = 'center'; 
+    wrapper.style.justifyContent = 'center';
+    wrapper.style.fontFamily = "'Noto Sans KR', sans-serif";
+    
+    const isLight = currentTheme === 'light';
+    wrapper.style.color = isLight ? '#1e293b' : '#f8fafc';
+
+    // 4. Style adjustments for clone
+    clone.classList.remove('hidden', 'fade-in');
+    clone.style.display = 'flex';           
+    clone.style.flexDirection = 'column';   
+    clone.style.alignItems = 'center';      
+    clone.style.width = '100%';
+    clone.style.margin = '0 auto';          
+    clone.style.animation = 'none';
+
+    // Title style fix for html2canvas
+    const originalTitle = document.querySelector('.result-title');
+    const clonedTitle = clone.querySelector('.result-title');
+    if (originalTitle && clonedTitle) {
+        clonedTitle.innerText = originalTitle.innerText;
+        clonedTitle.style.background = 'none';
+        clonedTitle.style.webkitTextFillColor = 'initial';
+        clonedTitle.style.color = isLight ? '#1e293b' : '#f8fafc';
+        clonedTitle.style.marginBottom = '5px';
+    }
+
+    // Fix Score Circle alignment
+    const scoreContainer = clone.querySelector('.score-container');
+    if (scoreContainer) {
+        scoreContainer.style.margin = '20px auto 30px auto'; 
+    }
+
+    // 5. Create Footer
+    const footer = document.createElement('div');
+    footer.className = 'capture-footer';
+    footer.innerHTML = `
+        <span><i class="fa-brands fa-instagram"></i> jjuuuunn.hob</span>
+        <span style="opacity: 0.3;">|</span>
+        <span>jjuuuunn.github.io/freediving_quiz</span>
+    `;
+
+    // 6. Assemble
+    wrapper.appendChild(clone);
+    wrapper.appendChild(footer);
+    
+    captureTarget.innerHTML = '';
+    captureTarget.appendChild(wrapper);
+
+    await document.fonts.ready;
+
+    // 7. Prepare share text
+    const total = currentQuestions.length;
+    const resultMessage = document.getElementById('result-message').innerText;
+    let finalNameStr = '';
+    const subtitleEl = document.getElementById('result-subtitle');
+    if (subtitleEl) {
+        const displayedName = subtitleEl.innerText
+            .replace('님의 최종 성적입니다', '')
+            .replace('당신의 최종 성적입니다', '').trim();
+        finalNameStr = displayedName || lastUsername || '';
+    }
+
+    const textToShare = `🌊 AIDA 프리다이빙 퀴즈 결과 🌊\n\n레벨: ${currentLevel}\n점수: ${score} / ${total}\n${finalNameStr ? `이름: ${finalNameStr}\n` : ''}\n${resultMessage}\n\n당신도 도전해보세요!`;
 
     try {
-        const canvas = await html2canvas(resultCard, {
-            backgroundColor: '#1e3a8a', // A solid color from the dark theme gradient
+        const canvas = await html2canvas(wrapper, {
             useCORS: true,
-            scale: 2 // Increase resolution for better quality
+            scale: 2,
+            backgroundColor: null,
+            logging: false,
         });
 
-        // 2. Re-show elements after capture
-        actionButtons.classList.remove('hidden');
-        if (wrongAnswers.length > 0) {
-            reviewContainer.classList.remove('hidden');
-        }
-
         canvas.toBlob(async (blob) => {
-            if (!blob) {
-                console.error('Canvas to Blob conversion failed.');
-                shareAsTextFallback(textToShare); // Fallback to text
-                return;
-            }
+            if (!blob) return;
+            const file = new File([blob], "freediving_result.png", { type: "image/png" });
 
-            const file = new File([blob], 'freediving-quiz-result.png', { type: 'image/png' });
-
-            // 3. Use Web Share API if available
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 try {
                     await navigator.share({
                         files: [file],
-                        title: 'AIDA 프리다이빙 퀴즈 결과',
-                        text: textToShare,
+                        title: 'Freediving Evaluation Result',
+                        text: textToShare
                     });
-                } catch (err) {
-                    console.error('Share API failed:', err);
-                    shareAsTextFallback(textToShare); // Fallback on share error
+                } catch (shareError) {
+                    if (shareError.name !== 'AbortError') console.error(shareError);
                 }
             } else {
-                // Fallback for browsers that don't support file sharing
-                try {
-                    await navigator.clipboard.write([
-                        new ClipboardItem({ 'image/png': blob })
-                    ]);
-                    alert('결과 이미지가 클립보드에 복사되었습니다!');
-                } catch (err) {
-                    console.error('Clipboard API failed:', err);
-                    shareAsTextFallback(textToShare); // Final fallback
-                }
+                const link = document.createElement('a');
+                link.download = 'freediving_result.png';
+                link.href = canvas.toDataURL();
+                link.click();
+                alert("결과 이미지가 다운로드 되었습니다.");
             }
+            captureTarget.innerHTML = '';
         }, 'image/png');
 
     } catch (err) {
-        console.error('html2canvas failed:', err);
-        // Ensure elements are shown even if canvas fails
-        actionButtons.classList.remove('hidden');
-        if (wrongAnswers.length > 0) {
-            reviewContainer.classList.remove('hidden');
-        }
-        shareAsTextFallback(textToShare);
-    }
-}
-
-// Helper function for text-based sharing as a fallback
-async function shareAsTextFallback(textToShare) {
-    try {
-        await navigator.clipboard.writeText(textToShare);
-        alert('결과가 클립보드에 복사되었습니다! (이미지 공유 미지원)');
-    } catch (err) {
-        console.error('Fallback clipboard copy failed:', err);
-        alert('결과 복사에 실패했습니다.');
+        console.error('Capture failed:', err);
+        alert('이미지 생성에 실패했습니다.');
+        captureTarget.innerHTML = '';
     }
 }
 

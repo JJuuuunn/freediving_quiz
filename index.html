@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoVBL5gDQiG1lTigC01evOmupWDFwg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
     <div class="main-wrapper">
@@ -125,8 +125,10 @@
                     <i id="result-icon" class="fa-solid fa-trophy"></i>
                 </div>
                 
-                <h2 class="result-title">EVALUATION COMPLETE</h2>
-                <p class="result-subtitle">당신의 최종 성적입니다</p>
+                <div id="result-badge" class="result-badge hidden">LEVEL</div>
+
+                <h2 class="result-title">DIVE COMPLETED</h2>
+                <p id="result-subtitle" class="result-subtitle">당신의 최종 성적입니다</p>
 
                 <div class="score-container">
                     <div class="score-circle">
@@ -145,7 +147,7 @@
                 </button>
 
                 <div id="review-container" class="review-area hidden">
-                    <h4 class="text-start mb-3" style="color: white; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px;">
+                    <h4 class="text-start mb-3">
                         <i class="fa-solid fa-book-open me-2"></i>오답 노트
                     </h4>
                     <div id="wrong-answers-list"></div>
@@ -161,7 +163,6 @@
                 </div>
             </div>
 
-            <!-- 리더보드 화면 -->
             <div id="leaderboard-screen" class="hidden fade-in text-center">
                 <h2 class="main-title">🏆 Leaderboard 🏆</h2>
                 <select id="leaderboard-level-select" class="form-select mt-4 mb-3"></select>
@@ -171,7 +172,6 @@
                 </button>
             </div>
 
-            <!-- 사용자 이름 입력 모달 -->
             <div id="username-modal" class="hidden">
                 <div class="modal-content">
                     <h4>새로운 기록!</h4>
@@ -183,6 +183,8 @@
 
         </div>
     </div>
+
+    <div id="capture-target" style="position: absolute; left: -9999px; top: -9999px;"></div>
 
     <script src="script.js"></script>
 </body>

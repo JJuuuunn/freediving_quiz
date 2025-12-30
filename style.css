@@ -1,5 +1,4 @@
-/* 
-  기본 테마를 현재의 '다크 모드'로 설정하고,
+/* 기본 테마를 현재의 '다크 모드'로 설정하고,
   data-theme="light" 속성을 통해 라이트 모드를 옵션으로 제공합니다.
 */
 
@@ -19,6 +18,7 @@
     --surface-glass: rgba(255, 255, 255, 0.05);
     --border-glass: rgba(255, 255, 255, 0.1);
     --border-light: #e2e8f0;
+    --surface-glass-solid: #1e293b;
 
     /* Accent & Brand Colors */
     --primary-accent: #0ea5e9;
@@ -30,6 +30,7 @@
     --option-bg: #f8fafc;
     --option-hover-bg: #f1f5f9;
     --progress-pill-bg: rgba(255,255,255,0.2);
+    --text-glow: 0 0 10px rgba(255,255,255,0.5);
 }
 
 [data-theme="light"] {
@@ -37,7 +38,7 @@
     --body-bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 
     /* Text Colors */
-    --text-on-dark-primary: #1e293b; /* In light theme, this is on a light bg */
+    --text-on-dark-primary: #1e293b;
     --text-on-dark-secondary: #64748b;
     
     /* Card & Surfaces */
@@ -46,12 +47,13 @@
     --surface-glass: rgba(0, 0, 0, 0.02);
     --border-glass: rgba(0, 0, 0, 0.05);
     --border-light: #e2e8f0;
+    --surface-glass-solid: #ffffff;
 
     /* Buttons & Interactions */
     --progress-pill-bg: rgba(0,0,0,0.05);
-    --logo-icon-color: var(--primary-accent); /* For light theme */
+    --logo-icon-color: var(--primary-accent);
+    --text-glow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
-
 
 body {
     font-family: 'Noto Sans KR', sans-serif;
@@ -67,7 +69,7 @@ body {
     align-items: center;
     justify-content: center;
     padding: 20px;
-    position: relative; /* For global theme toggle positioning */
+    position: relative; 
 }
 
 .container-custom {
@@ -88,6 +90,7 @@ body {
 .sub-title { color: var(--text-on-dark-secondary); font-weight: 300; }
 .level-grid { display: flex; flex-direction: column; gap: 15px; }
 
+/* 1. 기본 카드 스타일 */
 .level-card {
     display: flex;
     align-items: center;
@@ -97,13 +100,116 @@ body {
     padding: 20px;
     width: 100%;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: all 0.2s ease; /* 부드러운 전환 */
     text-align: left;
+    
+    /* [중요] 체크 아이콘(absolute)의 기준점이 되기 위해 필수 */
+    position: relative; 
+    overflow: hidden; 
 }
 
 .level-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+/* =========================================
+   2. 완료된(completed) 카드 스타일 - 다크/라이트 분리
+   ========================================= */
+
+/* [공통] 완료된 카드의 기본 구조 */
+.level-card.completed {
+    border-color: var(--primary-accent);
+}
+
+/* [공통] 화살표 숨김 */
+.level-card.completed .arrow-icon {
+    display: none;
+}
+
+/* ----------------------------------------------------
+   (A) 다크 모드 (기본) 스타일
+   : 어두운 배경 위에서 빛나는 흰색 글씨
+   ---------------------------------------------------- */
+.level-card.completed {
+    background: rgba(14, 165, 233, 0.15); /* 어두운 배경 위 은은한 파란 틴트 */
+}
+
+.level-card.completed .level-info h3 {
+    color: #ffffff !important; /* 완전 흰색 */
+    font-weight: 800;
+    text-shadow: 0 0 10px rgba(14, 165, 233, 0.6); /* 네온 글로우 효과 */
+}
+
+.level-card.completed .level-info span {
+    color: #e0f2fe !important; /* 아주 밝은 하늘색 */
+    font-weight: 500;
+}
+
+/* ----------------------------------------------------
+   (B) 라이트 모드 (화이트 모드) 스타일
+   : 밝은 배경 위에서 잘 보이는 진한 글씨
+   ---------------------------------------------------- */
+[data-theme="light"] .level-card.completed {
+    background: #f0f9ff; /* 아주 밝은 하늘색 배경 (종이 느낌) */
+    border-color: #0ea5e9;
+}
+
+[data-theme="light"] .level-card.completed .level-info h3 {
+    color: #0ea5e9 !important; /* 진한 파란색 (가독성 확보) */
+    text-shadow: none !important; /* 라이트 모드에선 그림자 제거 (깔끔하게) */
+}
+
+[data-theme="light"] .level-card.completed .level-info span {
+    color: #475569 !important; /* 진한 회색 */
+}
+
+/* 라이트 모드일 때 체크 아이콘 색상 미세 조정 */
+[data-theme="light"] .level-card.completed::after {
+    color: #0284c7; /* 조금 더 진한 파란색 체크 */
+}
+
+/* 3. 완료된 카드에서는 원래 있던 화살표(>) 숨김 */
+.level-card.completed .arrow-icon {
+    display: none;
+}
+
+/* 4. 완료 체크 아이콘 생성 (가상 요소 사용) */
+.level-card.completed::after {
+    content: '\f058'; /* Font Awesome의 체크 아이콘 코드 (Solid Circle Check) */
+    font-family: 'Font Awesome 6 Free'; /* 폰트 패밀리 정확히 명시 */
+    font-weight: 900; /* Solid 아이콘은 900 필수 */
+    
+    /* 위치 잡기 */
+    position: absolute;
+    right: 20px;       /* 오른쪽 여백 */
+    top: 50%;          /* 수직 중앙 */
+    transform: translateY(-50%); /* 정확한 수직 중앙 정렬 */
+    
+    /* 디자인 */
+    color: var(--primary-accent); /* 테마 색상 */
+    font-size: 1.5rem; /* 아이콘 크기 */
+    
+    /* 뿅! 하고 나타나는 애니메이션 */
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* 체크 아이콘 등장 애니메이션 키프레임 */
+@keyframes popIn {
+    from { 
+        transform: translateY(-50%) scale(0) rotate(-45deg); 
+        opacity: 0; 
+    }
+    to { 
+        transform: translateY(-50%) scale(1) rotate(0); 
+        opacity: 1; 
+    }
+}
+
+/* 5. 라이트 모드일 때 완료 카드 배경색 미세 조정 */
+[data-theme="light"] .level-card.completed {
+    background: rgba(14, 165, 233, 0.15); /* 라이트 모드에선 조금 더 진하게 */
+    border-color: var(--primary-accent);
 }
 
 .level-icon {
@@ -125,9 +231,12 @@ body {
 .arrow-icon { margin-left: auto; color: var(--text-on-dark-secondary); }
 
 /* 퀴즈 화면 스타일 */
-.quiz-header { display: flex; justify-content: space-between; align-items: center; }
+.quiz-header { display: flex; justify-content: space-between; align-items: center; position: relative; }
 .btn-back { background: none; border: none; color: var(--text-on-dark-primary); font-size: 1.2rem; cursor: pointer; }
 .progress-pill {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     background: var(--progress-pill-bg);
     padding: 5px 15px;
     border-radius: 20px;
@@ -185,6 +294,32 @@ body {
 .result-icon-area { font-size: 50px; margin-bottom: 20px; color: var(--primary-accent); text-shadow: 0 0 20px rgba(14, 165, 233, 0.6); animation: floatIcon 3s ease-in-out infinite; }
 @keyframes floatIcon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
+/* 레벨 뱃지 스타일 (추가됨) */
+.result-badge {
+    display: inline-block;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    padding: 8px 24px;
+    border-radius: 50px;
+    margin-bottom: 20px;
+    margin-top: -10px;
+    text-transform: uppercase;
+    
+    /* 기본(다크모드) */
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(5px);
+}
+
+[data-theme="light"] .result-badge {
+    border: 2px solid var(--primary-accent);
+    background: rgba(14, 165, 233, 0.1);
+    color: var(--primary-accent);
+}
+
 .result-title {
     font-size: 24px; font-weight: 800; margin: 0;
     color: var(--text-on-dark-primary);
@@ -206,7 +341,7 @@ body {
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
     position: relative;
 }
-#final-score { font-size: 56px; font-weight: 900; color: var(--text-on-dark-primary); line-height: 1; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+#final-score { font-size: 56px; font-weight: 900; color: var(--text-on-dark-primary); line-height: 1; text-shadow: var(--text-glow); }
 .total-score { font-size: 16px; color: var(--text-on-dark-secondary); margin-top: 5px; }
 
 .message-box {
@@ -229,6 +364,10 @@ body {
 }
 .restart-btn:hover { background: #ffffff; color: #0072ff; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3); }
 
+[data-theme="light"] .restart-btn:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
 .home-btn {
     flex: 1; padding: 15px; border-radius: 12px; font-size: 15px; cursor: pointer;
     background: rgba(15, 23, 42, 0.5);
@@ -237,6 +376,18 @@ body {
     font-weight: 600; box-shadow: none; transition: all 0.3s ease;
 }
 .home-btn:hover { background: #ffffff; border-color: #ffffff; color: #0f172a; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
+
+[data-theme="light"] .home-btn {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: var(--text-on-dark-secondary);
+}
+
+[data-theme="light"] .home-btn:hover {
+    background: #e2e8f0;
+    border-color: #e2e8f0;
+    color: var(--primary-accent);
+}
 
 .btn-quit {
     background: transparent;
@@ -254,6 +405,13 @@ body {
     padding-top: 20px;
     border-top: 1px solid var(--border-glass);
 }
+.review-area h4 {
+    color: var(--text-on-dark-primary);
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--border-glass);
+    padding-bottom: 10px;
+    margin-bottom: 1rem; 
+}
 .review-card {
     background: var(--card-bg);
     border-radius: 12px; padding: 15px; margin-bottom: 15px;
@@ -267,7 +425,6 @@ body {
 .review-expl { color: var(--text-on-light-secondary); font-size: 0.85rem; border-top: 1px dashed var(--border-light); padding-top: 8px; margin-top: 8px; }
 .label { font-weight: normal; color: var(--text-on-light-primary); margin-right: 5px; }
 
-/* --- 추가된 기능 스타일 --- */
 
 /* 테마 토글 버튼 */
 #global-theme-toggle-container {
@@ -290,9 +447,12 @@ body {
     transform: scale(1.1);
 }
 
+.header-actions #global-theme-toggle-container {
+    position: static;
+}
+
 /* 홈 화면 스타일 */
 .logo-icon { color: var(--logo-icon-color); }
-.main-title { font-weight: 700; color: var(--text-on-dark-primary); margin-bottom: 5px; }
 .header-actions { display: flex; gap: 10px; align-items: center; }
 
 /* 공유 버튼 */
@@ -311,20 +471,6 @@ body {
 .share-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
-}
-
-
-/* 진행 상황 - 완료된 레벨 */
-.level-card.completed::after {
-    content: '\f058'; /* Font Awesome check-circle */
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    color: var(--primary-accent);
-    font-size: 1.5rem;
-    opacity: 0.8;
 }
 
 /* 리더보드 */
@@ -390,11 +536,40 @@ body {
     font-weight: 600;
     opacity: 0;
     transition: opacity 0.5s, transform 0.5s;
-    pointer-events: none; /* Prevent interaction */
+    pointer-events: none;
 }
 .notification.show {
     opacity: 1;
     transform: translateX(-50%) translateY(-10px);
 }
 
+/* 캡처 이미지 전용 스타일 (추가됨) */
+.capture-footer {
+    margin-top: 50px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 400;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
 
+.capture-footer i {
+    margin-right: 4px;
+}
+
+[data-theme="light"] .capture-footer {
+    color: rgba(0, 0, 0, 0.5);
+    border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+.html2canvas-capturing .result-icon-area {
+    animation: none !important;
+    text-shadow: none !important;
+    transform: none !important;
+}
