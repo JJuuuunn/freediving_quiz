@@ -1,36 +1,109 @@
-// script.js 전체 수정본
+// ==================================
+// FREEDIVING QUIZ SCRIPT
+// ==================================
 
+// --- Global State & Config ---
 let allData = {};
 let currentQuestions = [];
 let currentIndex = 0;
 let score = 0;
-let wrongAnswers = []; // [신규] 오답 저장용 배열
+let wrongAnswers = [];
+let currentLevel = '';
+let userProgress = { completedLevels: [] };
 
-// 데이터 로드
-fetch('quiz_data.json')
-    .then(response => response.json())
-    .then(data => {
-        allData = data;
-        console.log("Data Loaded");
-    })
-    .catch(error => alert("quiz_data.json 파일을 찾을 수 없습니다."));
+// --- DOM Elements ---
+const homeScreen = document.getElementById('home-screen');
+const quizScreen = document.getElementById('quiz-screen');
+const resultScreen = document.getElementById('result-screen');
+const leaderboardScreen = document.getElementById('leaderboard-screen');
+const usernameModal = document.getElementById('username-modal');
 
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Fetch data first, then initialize the rest
+    fetch('quiz_data.json')
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            allData = data;
+            console.log("Quiz data loaded successfully.");
+            // These depend on data, so they go in here
+            populateLevelSelector();
+            loadProgress();
+            updateUIForProgress();
+        })
+        .catch(error => {
+            console.error("Failed to load quiz_data.json:", error);
+            alert("퀴즈 데이터를 불러오는 데 실패했습니다. 파일을 확인해주세요.");
+        });
+    
+    // These can be initialized regardless of data
+    initTheme();
+    attachEventListeners();
+});
+
+function attachEventListeners() {
+    // Theme Toggle
+    document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
+    
+    // --- Navigation ---
+    // Home Screen
+    document.getElementById('leaderboard-btn').addEventListener('click', showLeaderboard);
+    // Quiz Screen
+    document.getElementById('back-to-home-btn').addEventListener('click', goHome);
+    document.getElementById('quit-quiz-btn').addEventListener('click', finishQuiz);
+    document.getElementById('next-btn').addEventListener('click', nextQuestion);
+    // Result Screen
+    document.getElementById('restart-btn').addEventListener('click', restartQuiz);
+    document.querySelector('#result-screen .home-btn').addEventListener('click', goHome);
+    document.getElementById('share-btn').addEventListener('click', shareScore);
+    // Leaderboard Screen
+    document.getElementById('leaderboard-level-select').addEventListener('change', (e) => renderLeaderboard(e.target.value));
+    document.getElementById('leaderboard-home-btn').addEventListener('click', goHome);
+    
+    // --- Modals ---
+    // Username Modal
+    document.getElementById('save-score-btn').addEventListener('click', saveScoreAndCloseModal);
+}
+
+// --- Theme Management (Feature 6) ---
+function initTheme() {
+    // Default to dark, only switch to light if explicitly set
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setTheme(savedTheme);
+}
+
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    const iconClass = theme === 'light' ? 'fa-sun' : 'fa-moon';
+    document.querySelectorAll('.theme-toggle-btn i').forEach(icon => {
+        icon.className = `fa-solid ${iconClass}`;
+    });
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+}
+
+
+// --- Quiz Logic ---
 function startQuiz(level) {
-    if (!allData[level]) {
-        alert("데이터 로딩 중입니다. 잠시만 기다려주세요.");
+    if (!allData[level] || allData[level].length === 0) {
+        alert("선택한 레벨의 문제 데이터가 없습니다.");
         return;
     }
-    
-    // 초기화
+    currentLevel = level;
     currentQuestions = [...allData[level]].sort(() => Math.random() - 0.5);
     currentIndex = 0;
     score = 0;
-    wrongAnswers = []; // 오답 초기화
+    wrongAnswers = [];
     
-    document.getElementById('home-screen').classList.add('hidden');
-    document.getElementById('quiz-screen').classList.remove('hidden');
-    document.getElementById('result-screen').classList.add('hidden'); // 결과 화면 숨김 확실히
-    
+    showScreen(quizScreen);
     renderQuestion();
 }
 
@@ -40,12 +113,10 @@ function renderQuestion() {
     document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${currentQuestions.length}`;
     document.getElementById('q-num').innerText = currentIndex + 1;
     document.getElementById('q-text').innerText = q.q;
-    document.getElementById('q-tags').innerText = q.topic ? q.topic : '일반';
     
     const imgWrapper = document.getElementById('img-wrapper');
-    const imgEl = document.getElementById('q-image');
     if (q.img && q.img.trim() !== "") {
-        imgEl.src = q.img;
+        document.getElementById('q-image').src = q.img;
         imgWrapper.classList.remove('hidden');
     } else {
         imgWrapper.classList.add('hidden');
@@ -53,9 +124,8 @@ function renderQuestion() {
 
     const optsContainer = document.getElementById('options-container');
     optsContainer.innerHTML = '';
-    
     document.getElementById('feedback').classList.add('hidden');
-    document.getElementById('next-btn').classList.add('hidden');
+    document.getElementById('next-btn').classList.remove('hidden');
 
     q.options.forEach((optText, idx) => {
         const btn = document.createElement('button');
@@ -69,6 +139,7 @@ function renderQuestion() {
 function checkAnswer(clickedBtn, selectedIdx, correctIdx, explanation) {
     const buttons = document.querySelectorAll('.option-btn');
     buttons.forEach(btn => btn.disabled = true);
+    document.getElementById('next-btn').classList.remove('hidden');
 
     const q = currentQuestions[currentIndex];
 
@@ -78,21 +149,18 @@ function checkAnswer(clickedBtn, selectedIdx, correctIdx, explanation) {
     } else {
         clickedBtn.classList.add('wrong');
         buttons[correctIdx - 1].classList.add('correct');
-        
-        // [신규] 틀린 문제 정보를 배열에 저장
         wrongAnswers.push({
             question: q.q,
             userSelect: clickedBtn.innerText,
             correctSelect: q.options[correctIdx - 1],
-            explanation: explanation ? explanation : "해설 없음"
+            explanation: explanation || "해설 없음"
         });
     }
 
-    const explEl = document.getElementById('explanation');
-    explEl.innerText = explanation ? explanation : "별도의 해설이 없습니다.";
-    document.getElementById('feedback').classList.remove('hidden');
-    
-    document.getElementById('next-btn').classList.remove('hidden');
+    if (explanation) {
+        document.getElementById('explanation').innerText = explanation;
+        document.getElementById('feedback').classList.remove('hidden');
+    }
 }
 
 function nextQuestion() {
@@ -104,19 +172,37 @@ function nextQuestion() {
     }
 }
 
-// [신규] 도중 종료 함수
 function finishQuiz() {
-    if(confirm("문제를 그만 풀고 결과를 확인하시겠습니까?")) {
+    if (confirm("문제를 그만 풀고 결과를 확인하시겠습니까?")) {
         showResult();
     }
 }
 
-function showResult() {
-    document.getElementById('quiz-screen').classList.add('hidden');
-    document.getElementById('result-screen').classList.remove('hidden');
+function restartQuiz() {
+    startQuiz(currentLevel);
+}
 
+function goHome() {
+    showScreen(homeScreen);
+    updateUIForProgress();
+}
+
+// --- Screen Management ---
+function showScreen(screenToShow) {
+    [homeScreen, quizScreen, resultScreen, leaderboardScreen, usernameModal].forEach(screen => {
+        screen.classList.add('hidden');
+    });
+    if (screenToShow) {
+        screenToShow.classList.remove('hidden');
+    }
+}
+
+// --- Result & Progress (Feature 4) ---
+function showResult() {
+    showScreen(resultScreen);
+    
     const total = currentQuestions.length;
-    const percentage = total === 0 ? 0 : (score / total) * 100;
+    const percentage = total === 0 ? 0 : Math.round((score / total) * 100);
     
     document.getElementById('final-score').innerText = score;
     document.querySelector('.total-score').innerText = `/ ${total}`;
@@ -124,92 +210,247 @@ function showResult() {
     const messageEl = document.getElementById('result-message');
     const commentEl = document.getElementById('result-comment');
     const iconEl = document.getElementById('result-icon');
-    const circle = document.querySelector('.score-circle');
-
-    // 결과 메시지 로직
-    if (percentage >= 90) {
-        messageEl.innerText = "Master Diver!";
-        commentEl.innerText = "완벽합니다! 이론은 마스터하셨네요.";
+    
+    if (percentage === 100) {
+        messageEl.innerText = "Perfect Master!";
+        commentEl.innerText = "이론을 완벽하게 마스터하셨습니다! 당신은 최고의 프리다이버입니다.";
         iconEl.className = "fa-solid fa-trophy";
-        iconEl.style.color = "#ffd700"; 
-        circle.style.borderColor = "#ffd700"; 
+        iconEl.style.color = "#2ECC71"; // Emerald Green
+    } else if (percentage >= 95) {
+        messageEl.innerText = "Perfect!";
+        commentEl.innerText = "이론을 거의 완벽하게 마스터하셨습니다!";
+        iconEl.className = "fa-solid fa-trophy";
+        iconEl.style.color = "#FFD700"; // Gold
+    } else if (percentage >= 85) {
+        messageEl.innerText = "Excellent!";
+        commentEl.innerText = "훌륭합니다! 강사 수준의 지식입니다.";
+        iconEl.className = "fa-solid fa-award";
+        iconEl.style.color = "#C0C0C0"; // Silver
     } else if (percentage >= 75) {
         messageEl.innerText = "Passed";
-        commentEl.innerText = "합격입니다! 안전하게 다이빙하세요.";
+        commentEl.innerText = "합격입니다! 안전하게 다이빙을 즐기세요.";
         iconEl.className = "fa-solid fa-medal";
-        iconEl.style.color = "#00e676"; 
-        circle.style.borderColor = "#00e676";
+        iconEl.style.color = "#CD7F32"; // Bronze
+    } else if (percentage >= 60) {
+        messageEl.innerText = "Almost there!";
+        commentEl.innerText = "조금만 더! 핵심 개념들을 다시 복습해보세요.";
+        iconEl.className = "fa-solid fa-book-open";
+        iconEl.style.color = "#0ea5e9"; // Primary Blue
     } else {
         messageEl.innerText = "Try Again";
-        commentEl.innerText = "조금 더 학습이 필요합니다.";
+        commentEl.innerText = "기초부터 다시 한번! 포기하지 마세요.";
         iconEl.className = "fa-solid fa-person-drowning";
-        iconEl.style.color = "#ff5252"; 
-        circle.style.borderColor = "#ff5252";
+        iconEl.style.color = "#ef4444"; // Red
     }
 
-    // [신규] 오답 노트 렌더링
+    // Pass/Fail에 따라서만 진행도 업데이트
+    if (percentage >= 75) {
+        updateProgress(currentLevel);
+    }
+
     renderReview();
+
+    const topScores = getScores(currentLevel);
+    if (score > 0 && (topScores.length < 10 || score > topScores[topScores.length - 1].score)) {
+        setTimeout(() => usernameModal.classList.remove('hidden'), 500);
+    }
 }
 
-// [신규] 오답 노트 HTML 생성 함수
+function loadProgress() {
+    const savedProgress = localStorage.getItem('freedivingQuizProgress');
+    if (savedProgress) {
+        userProgress = JSON.parse(savedProgress);
+    }
+}
+
+function saveProgress() {
+    localStorage.setItem('freedivingQuizProgress', JSON.stringify(userProgress));
+}
+
+function updateProgress(level) {
+    if (!userProgress.completedLevels.includes(level)) {
+        userProgress.completedLevels.push(level);
+        saveProgress();
+    }
+}
+
+function updateUIForProgress() {
+    document.querySelectorAll('.level-card').forEach(card => {
+        if (userProgress.completedLevels.includes(card.dataset.level)) {
+            card.classList.add('completed');
+        } else {
+            card.classList.remove('completed');
+        }
+    });
+}
+
 function renderReview() {
     const reviewContainer = document.getElementById('review-container');
     const listContainer = document.getElementById('wrong-answers-list');
-    listContainer.innerHTML = ""; // 초기화
+    listContainer.innerHTML = "";
 
     if (wrongAnswers.length === 0) {
         reviewContainer.classList.add('hidden');
         return;
     }
-
     reviewContainer.classList.remove('hidden');
-
     wrongAnswers.forEach((item, idx) => {
         const card = document.createElement('div');
         card.className = 'review-card';
-        card.innerHTML = `
-            <div class="review-q">
-                <span class="badge bg-danger mb-2">오답 ${idx + 1}</span>
-                <p>${item.question}</p>
-            </div>
-            <div class="review-details">
-                <div class="my-answer">
-                    <i class="fa-solid fa-xmark text-danger"></i> 
-                    <span class="label">내가 고른 답:</span> ${item.userSelect}
-                </div>
-                <div class="correct-answer">
-                    <i class="fa-solid fa-check text-success"></i> 
-                    <span class="label">정답:</span> ${item.correctSelect}
-                </div>
-                <div class="review-expl">
-                    <i class="fa-solid fa-comment-dots"></i> ${item.explanation}
-                </div>
-            </div>
-        `;
+        card.innerHTML = `<div class="review-q"><span class="badge bg-danger mb-2">오답 ${idx + 1}</span><p>${item.question}</p></div><div class="review-details"><div class="my-answer"><i class="fa-solid fa-xmark text-danger"></i> <span class="label">내가 고른 답:</span> ${item.userSelect}</div><div class="correct-answer"><i class="fa-solid fa-check text-success"></i> <span class="label">정답:</span> ${item.correctSelect}</div><div class="review-expl"><i class="fa-solid fa-comment-dots"></i> ${item.explanation}</div></div>`;
         listContainer.appendChild(card);
     });
 }
 
-function restartQuiz() {
-    // 다시 시작 시 오답 기록 초기화는 startQuiz에서 처리됨
-    startQuiz(Object.keys(allData).find(key => allData[key].length > 0) || 'AIDA 2'); 
-    // 주의: 위 코드는 startQuiz의 인자가 필요하므로, 실제로는 
-    // 전역변수로 현재 레벨을 저장해두거나 해야 합니다. 
-    // 여기서는 간단히 이전에 풀던 로직을 유지하기 위해 아래와 같이 수정 제안합니다.
-    
-    // *수정*: 간단한 restart 구현을 위해 현재 currentQuestions를 다시 섞기만 함 (레벨 유지)
-    score = 0;
-    currentIndex = 0;
-    wrongAnswers = [];
-    currentQuestions.sort(() => Math.random() - 0.5);
-    
-    document.getElementById('result-screen').classList.add('hidden');
-    document.getElementById('quiz-screen').classList.remove('hidden');
-    renderQuestion();
+// --- Leaderboard (Feature 3) ---
+function getScores(level) {
+    const scores = localStorage.getItem(`leaderboard_${level}`);
+    return scores ? JSON.parse(scores) : [];
 }
 
-function goHome() {
-    document.getElementById('quiz-screen').classList.add('hidden');
-    document.getElementById('result-screen').classList.add('hidden');
-    document.getElementById('home-screen').classList.remove('hidden');
+function saveScore(level, name, score, total) {
+    const scores = getScores(level);
+    scores.push({ name, score, total, date: new Date().toISOString() });
+    scores.sort((a, b) => b.score - a.score || new Date(a.date) - new Date(b.date));
+    const newScores = scores.slice(0, 10);
+    localStorage.setItem(`leaderboard_${level}`, JSON.stringify(newScores));
+}
+
+function saveScoreAndCloseModal() {
+    const username = document.getElementById('username-input').value.trim();
+    if (username) {
+        saveScore(currentLevel, username, score, currentQuestions.length);
+        usernameModal.classList.add('hidden');
+        document.getElementById('username-input').value = '';
+        showNotification("🏆 점수가 리더보드에 저장되었습니다!");
+    } else {
+        alert("이름을 입력해주세요.");
+    }
+}
+
+function showLeaderboard() {
+    showScreen(leaderboardScreen);
+    const levelToShow = currentLevel || Object.keys(allData)[0] || 'AIDA 2';
+    document.getElementById('leaderboard-level-select').value = levelToShow;
+    renderLeaderboard(levelToShow);
+}
+
+function renderLeaderboard(level) {
+    const scores = getScores(level);
+    const listEl = document.getElementById('leaderboard-list');
+    listEl.innerHTML = '';
+    if (scores.length === 0) {
+        listEl.innerHTML = '<p class="text-center p-3">아직 등록된 점수가 없습니다.</p>';
+        return;
+    }
+    scores.forEach((item, idx) => {
+        const scoreEl = document.createElement('div');
+        scoreEl.className = 'leaderboard-item';
+        scoreEl.innerHTML = `
+            <div class="d-flex align-items-center">
+                <span class="rank me-3">#${idx + 1}</span>
+                <span class="name">${item.name}</span>
+            </div>
+            <span class="score">${item.score} / ${item.total}</span>
+        `;
+        listEl.appendChild(scoreEl);
+    });
+}
+
+function populateLevelSelector() {
+    const selectEl = document.getElementById('leaderboard-level-select');
+    if (Object.keys(allData).length > 0) {
+        selectEl.innerHTML = Object.keys(allData).map(level => `<option value="${level}">${level}</option>`).join('');
+    }
+}
+
+// --- Share Score (Feature 5) ---
+async function shareScore() {
+    const resultCard = document.getElementById('result-screen');
+    const reviewContainer = document.getElementById('review-container');
+    const actionButtons = document.querySelector('.result-actions');
+    const textToShare = `🌊 AIDA 프리다이빙 퀴즈 결과 🌊\n\n레벨: ${currentLevel}\n점수: ${score} / ${currentQuestions.length}\n\n당신도 도전해보세요!`;
+
+    // 1. Temporarily hide non-essential elements
+    reviewContainer.classList.add('hidden');
+    actionButtons.classList.add('hidden');
+
+    try {
+        const canvas = await html2canvas(resultCard, {
+            backgroundColor: '#1e3a8a', // A solid color from the dark theme gradient
+            useCORS: true,
+            scale: 2 // Increase resolution for better quality
+        });
+
+        // 2. Re-show elements after capture
+        actionButtons.classList.remove('hidden');
+        if (wrongAnswers.length > 0) {
+            reviewContainer.classList.remove('hidden');
+        }
+
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                console.error('Canvas to Blob conversion failed.');
+                shareAsTextFallback(textToShare); // Fallback to text
+                return;
+            }
+
+            const file = new File([blob], 'freediving-quiz-result.png', { type: 'image/png' });
+
+            // 3. Use Web Share API if available
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'AIDA 프리다이빙 퀴즈 결과',
+                        text: textToShare,
+                    });
+                } catch (err) {
+                    console.error('Share API failed:', err);
+                    shareAsTextFallback(textToShare); // Fallback on share error
+                }
+            } else {
+                // Fallback for browsers that don't support file sharing
+                try {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                    alert('결과 이미지가 클립보드에 복사되었습니다!');
+                } catch (err) {
+                    console.error('Clipboard API failed:', err);
+                    shareAsTextFallback(textToShare); // Final fallback
+                }
+            }
+        }, 'image/png');
+
+    } catch (err) {
+        console.error('html2canvas failed:', err);
+        // Ensure elements are shown even if canvas fails
+        actionButtons.classList.remove('hidden');
+        if (wrongAnswers.length > 0) {
+            reviewContainer.classList.remove('hidden');
+        }
+        shareAsTextFallback(textToShare);
+    }
+}
+
+// Helper function for text-based sharing as a fallback
+async function shareAsTextFallback(textToShare) {
+    try {
+        await navigator.clipboard.writeText(textToShare);
+        alert('결과가 클립보드에 복사되었습니다! (이미지 공유 미지원)');
+    } catch (err) {
+        console.error('Fallback clipboard copy failed:', err);
+        alert('결과 복사에 실패했습니다.');
+    }
+}
+
+// --- UI Helpers ---
+function showNotification(message) {
+    const notification = document.getElementById('notification');
+    notification.textContent = message;
+    notification.classList.add('show');
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 3000);
 }

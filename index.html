@@ -8,20 +8,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoVBL5gDQiG1lTigC01evOmupWDFwg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
     <div class="main-wrapper">
+        <div id="notification" class="notification hidden"></div>
+        <div id="global-theme-toggle-container" class="theme-toggle-container">
+            <button id="theme-toggle-btn" class="theme-toggle-btn"><i class="fa-solid fa-moon"></i></button>
+        </div>
         <div class="container container-custom">
             
             <div id="home-screen" class="text-center fade-in">
                 <div class="logo-area mb-5">
-                    <i class="fa-solid fa-water fa-3x text-light mb-3"></i>
+                    <i class="fa-solid fa-water fa-3x logo-icon mb-3"></i>
                     <h1 class="main-title">AIDA Freediving</h1>
                     <p class="sub-title">이론 평가 시뮬레이터</p>
                 </div>
                 
                 <div class="level-grid">
-                    <button onclick="startQuiz('AIDA 1')" class="level-card">
+                    <button onclick="startQuiz('AIDA 1')" class="level-card" data-level="AIDA 1">
                         <div class="level-icon">1</div>
                         <div class="level-info">
                             <h3>AIDA 1</h3>
@@ -30,7 +35,7 @@
                         <i class="fa-solid fa-chevron-right arrow-icon"></i>
                     </button>
 
-                    <button onclick="startQuiz('AIDA 2')" class="level-card">
+                    <button onclick="startQuiz('AIDA 2')" class="level-card" data-level="AIDA 2">
                         <div class="level-icon">2</div>
                         <div class="level-info">
                             <h3>AIDA 2</h3>
@@ -39,7 +44,7 @@
                         <i class="fa-solid fa-chevron-right arrow-icon"></i>
                     </button>
 
-                    <button onclick="startQuiz('AIDA 3')" class="level-card">
+                    <button onclick="startQuiz('AIDA 3')" class="level-card" data-level="AIDA 3">
                         <div class="level-icon">3</div>
                         <div class="level-info">
                             <h3>AIDA 3</h3>
@@ -48,7 +53,7 @@
                         <i class="fa-solid fa-chevron-right arrow-icon"></i>
                     </button>
 
-                    <button onclick="startQuiz('AIDA 4')" class="level-card">
+                    <button onclick="startQuiz('AIDA 4')" class="level-card" data-level="AIDA 4">
                         <div class="level-icon">4</div>
                         <div class="level-info">
                             <h3>AIDA 4</h3>
@@ -57,11 +62,17 @@
                         <i class="fa-solid fa-chevron-right arrow-icon"></i>
                     </button>
                 </div>
+
+                <div class="mt-5">
+                    <button id="leaderboard-btn" class="btn btn-secondary">
+                        <i class="fa-solid fa-trophy me-2"></i>리더보드
+                    </button>
+                </div>
             </div>
 
             <div id="quiz-screen" class="hidden">
-                <div class="quiz-header mb-4 d-flex justify-content-between align-items-center">
-                    <button onclick="goHome()" class="btn-back">
+                <div class="quiz-header mb-4">
+                    <button id="back-to-home-btn" class="btn-back">
                         <i class="fa-solid fa-arrow-left"></i>
                     </button>
                     
@@ -69,9 +80,11 @@
                         <span id="progress-text">1 / 50</span>
                     </div>
 
-                    <button onclick="finishQuiz()" class="btn-quit">
-                        <i class="fa-solid fa-flag-checkered"></i> 종료
-                    </button>
+                    <div class="header-actions">
+                        <button id="quit-quiz-btn" class="btn-quit" title="퀴즈 종료">
+                            <i class="fa-solid fa-flag-checkered"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="question-card shadow-lg">
@@ -102,7 +115,7 @@
                     </div>
                 </div>
 
-                <button id="next-btn" class="btn-next hidden" onclick="nextQuestion()">
+                <button id="next-btn" class="btn-next hidden">
                     다음 문제 <i class="fa-solid fa-arrow-right ms-2"></i>
                 </button>
             </div>
@@ -127,6 +140,10 @@
                     <p id="result-comment">이론 마스터 수준입니다.</p>
                 </div>
 
+                <button id="share-btn" class="share-btn mb-4">
+                    <i class="fa-solid fa-share-alt"></i> 이미지로 공유하기
+                </button>
+
                 <div id="review-container" class="review-area hidden">
                     <h4 class="text-start mb-3" style="color: white; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px;">
                         <i class="fa-solid fa-book-open me-2"></i>오답 노트
@@ -135,12 +152,32 @@
                 </div>
 
                 <div class="result-actions mt-4">
-                    <button onclick="restartQuiz()" class="restart-btn">
+                    <button id="restart-btn" class="restart-btn">
                         <i class="fa-solid fa-rotate-right"></i> 다시 풀기
                     </button>
-                    <button onclick="goHome()" class="home-btn">
+                    <button class="home-btn">
                         <i class="fa-solid fa-house"></i> 홈으로
                     </button>
+                </div>
+            </div>
+
+            <!-- 리더보드 화면 -->
+            <div id="leaderboard-screen" class="hidden fade-in text-center">
+                <h2 class="main-title">🏆 Leaderboard 🏆</h2>
+                <select id="leaderboard-level-select" class="form-select mt-4 mb-3"></select>
+                <div id="leaderboard-list" class="leaderboard-list"></div>
+                <button id="leaderboard-home-btn" class="home-btn mt-4">
+                    <i class="fa-solid fa-house"></i> 홈으로
+                </button>
+            </div>
+
+            <!-- 사용자 이름 입력 모달 -->
+            <div id="username-modal" class="hidden">
+                <div class="modal-content">
+                    <h4>새로운 기록!</h4>
+                    <p>리더보드에 등록할 이름을 입력하세요.</p>
+                    <input type="text" id="username-input" class="form-control" placeholder="이름 (10자 이내)" maxlength="10">
+                    <button id="save-score-btn" class="btn btn-primary mt-3">저장하기</button>
                 </div>
             </div>
 
