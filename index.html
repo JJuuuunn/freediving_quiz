@@ -20,7 +20,8 @@
             
             <div id="home-screen" class="text-center fade-in">
                 <div class="logo-area mb-5">
-                    <i class="fa-solid fa-water fa-3x logo-icon mb-3"></i>
+                    <img src="image/logo_light_mode.png" alt="AIDA Freediving Logo" class="logo-image logo-light mb-3">
+                    <img src="image/logo_dark_mode.png" alt="AIDA Freediving Logo" class="logo-image logo-dark mb-3">
                     <h1 class="main-title">AIDA Freediving</h1>
                     <p class="sub-title">이론 평가 시뮬레이터</p>
                 </div>
@@ -63,9 +64,12 @@
                     </button>
                 </div>
 
-                <div class="mt-5">
+                <div class="mt-5 d-flex justify-content-center gap-2">
                     <button id="leaderboard-btn" class="btn btn-secondary">
                         <i class="fa-solid fa-trophy me-2"></i>리더보드
+                    </button>
+                    <button id="settings-btn" class="btn btn-secondary">
+                        <i class="fa-solid fa-gear me-2"></i>설정
                     </button>
                 </div>
             </div>
@@ -185,6 +189,33 @@
     </div>
 
     <div id="capture-target" style="position: absolute; left: -9999px; top: -9999px;"></div>
+
+    <div id="settings-modal" class="hidden">
+        <div class="modal-content">
+            <h4><i class="fa-solid fa-sliders me-2"></i>출제 문항 수 설정</h4>
+            <p>퀴즈에 포함될 문제 수를 난이도별로 조절합니다.</p>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <label for="easy-count">쉬움 (Easy)</label>
+                    <input type="number" id="easy-count" class="form-control" min="0" value="15">
+                </div>
+                <div class="setting-item">
+                    <label for="medium-count">보통 (Medium)</label>
+                    <input type="number" id="medium-count" class="form-control" min="0" value="30">
+                </div>
+                <div class="setting-item">
+                    <label for="hard-count">어려움 (Hard)</label>
+                    <input type="number" id="hard-count" class="form-control" min="0" value="15">
+                </div>
+            </div>
+            <div id="total-questions-display" class="total-display mt-3">총 60 문제</div>
+            <div class="modal-actions mt-4">
+                <button id="save-settings-btn" class="btn btn-primary">저장</button>
+                <button id="reset-settings-btn" class="btn btn-outline-secondary">초기화</button>
+                <button id="close-settings-btn" class="btn btn-secondary">닫기</button>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>

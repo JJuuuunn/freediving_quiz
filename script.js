@@ -2,6 +2,68 @@
 // FREEDIVING QUIZ SCRIPT
 // ==================================
 
+// --- Quiz Generation Logic ---
+const DEFAULT_DIFFICULTY_CONFIG = { Easy: 15, Medium: 30, Hard: 15 };
+let DIFFICULTY_CONFIG = { ...DEFAULT_DIFFICULTY_CONFIG };
+
+/**
+ * Shuffles array in place.
+ * @param {Array} array items An array containing the items.
+ */
+function shuffleArray(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/**
+ * Generates a quiz set based on difficulty configuration.
+ * @param {Array} allQuestions All questions for a level.
+ * @returns {Array} A curated set of questions.
+ */
+function generateQuizSet(allQuestions) {
+  const totalQuestionsInConfig = Object.values(DIFFICULTY_CONFIG).reduce((a, b) => a + b, 0);
+
+  // If total questions are less than or equal to configured total, just shuffle all of them
+  if (allQuestions.length <= totalQuestionsInConfig) {
+    return shuffleArray(allQuestions);
+  }
+
+  const buckets = {
+    Easy: [],
+    Medium: [],
+    Hard: []
+  };
+
+  allQuestions.forEach((item) => {
+    let rawDiff = item.difficulty ? String(item.difficulty).trim() : 'Medium';
+    let normalizedDiff = rawDiff.charAt(0).toUpperCase() + rawDiff.slice(1).toLowerCase();
+    if (normalizedDiff === 'Normal') {
+      normalizedDiff = 'Medium';
+    }
+    if (buckets[normalizedDiff]) {
+      buckets[normalizedDiff].push(item);
+    } else {
+      buckets['Medium'].push(item);
+    }
+  });
+
+  let finalExamPaper = [];
+  
+  for (const [level, targetCount] of Object.entries(DIFFICULTY_CONFIG)) {
+    const questionsInBucket = buckets[level];
+    const shuffled = shuffleArray(questionsInBucket);
+    const selected = shuffled.slice(0, targetCount);
+    finalExamPaper = finalExamPaper.concat(selected);
+  }
+
+  return shuffleArray(finalExamPaper);
+}
+
+
 // --- Global State & Config ---
 let allData = {};
 let currentQuestions = [];
@@ -18,6 +80,7 @@ const quizScreen = document.getElementById('quiz-screen');
 const resultScreen = document.getElementById('result-screen');
 const leaderboardScreen = document.getElementById('leaderboard-screen');
 const usernameModal = document.getElementById('username-modal');
+const settingsModal = document.getElementById('settings-modal');
 
 // For theme toggle repositioning
 const themeToggleContainer = document.getElementById('global-theme-toggle-container');
@@ -38,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
             allData = data;
             console.log("Quiz data loaded successfully.");
             // These depend on data, so they go in here
+            loadDifficultyConfig();
             populateLevelSelector();
             loadProgress();
             updateUIForProgress();
@@ -59,6 +123,7 @@ function attachEventListeners() {
     // --- Navigation ---
     // Home Screen
     document.getElementById('leaderboard-btn').addEventListener('click', showLeaderboard);
+    document.getElementById('settings-btn').addEventListener('click', openSettingsModal);
     // Quiz Screen
     document.getElementById('back-to-home-btn').addEventListener('click', goHome);
     document.getElementById('quit-quiz-btn').addEventListener('click', finishQuiz);
@@ -74,6 +139,15 @@ function attachEventListeners() {
     // --- Modals ---
     // Username Modal
     document.getElementById('save-score-btn').addEventListener('click', saveScoreAndCloseModal);
+    // Settings Modal
+    document.getElementById('close-settings-btn').addEventListener('click', () => settingsModal.classList.add('hidden'));
+    document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
+    document.getElementById('reset-settings-btn').addEventListener('click', resetSettings);
+    
+    // Live update total count in settings
+    document.getElementById('easy-count').addEventListener('input', updateTotalQuestionsDisplay);
+    document.getElementById('medium-count').addEventListener('input', updateTotalQuestionsDisplay);
+    document.getElementById('hard-count').addEventListener('input', updateTotalQuestionsDisplay);
 }
 
 // --- Theme Management (Feature 6) ---
@@ -106,7 +180,7 @@ function startQuiz(level) {
         return;
     }
     currentLevel = level;
-    currentQuestions = [...allData[level]].sort(() => Math.random() - 0.5);
+    currentQuestions = generateQuizSet(allData[level]);
     currentIndex = 0;
     score = 0;
     wrongAnswers = [];
@@ -217,7 +291,7 @@ function showScreen(screenToShow) {
 
     Object.values(screenClasses).forEach(className => mainWrapper.classList.remove(className));
 
-    [homeScreen, quizScreen, resultScreen, leaderboardScreen, usernameModal].forEach(screen => {
+    [homeScreen, quizScreen, resultScreen, leaderboardScreen, usernameModal, settingsModal].forEach(screen => {
         screen.classList.add('hidden');
     });
 
@@ -586,4 +660,59 @@ function showNotification(message) {
     setTimeout(() => {
         notification.classList.remove('show');
     }, 3000);
+}
+
+// --- Settings Modal Logic ---
+function loadDifficultyConfig() {
+    const savedConfig = localStorage.getItem('freedivingQuizDifficultyConfig');
+    if (savedConfig) {
+        DIFFICULTY_CONFIG = JSON.parse(savedConfig);
+    } else {
+        DIFFICULTY_CONFIG = { ...DEFAULT_DIFFICULTY_CONFIG };
+    }
+}
+
+function saveDifficultyConfig(config) {
+    localStorage.setItem('freedivingQuizDifficultyConfig', JSON.stringify(config));
+    DIFFICULTY_CONFIG = config;
+}
+
+function openSettingsModal() {
+    document.getElementById('easy-count').value = DIFFICULTY_CONFIG.Easy;
+    document.getElementById('medium-count').value = DIFFICULTY_CONFIG.Medium;
+    document.getElementById('hard-count').value = DIFFICULTY_CONFIG.Hard;
+    updateTotalQuestionsDisplay();
+    settingsModal.classList.remove('hidden');
+}
+
+function saveSettings() {
+    const easy = parseInt(document.getElementById('easy-count').value, 10);
+    const medium = parseInt(document.getElementById('medium-count').value, 10);
+    const hard = parseInt(document.getElementById('hard-count').value, 10);
+
+    if (isNaN(easy) || isNaN(medium) || isNaN(hard) || easy < 0 || medium < 0 || hard < 0) {
+        alert("유효한 숫자를 입력해주세요 (0 이상).");
+        return;
+    }
+
+    const newConfig = { Easy: easy, Medium: medium, Hard: hard };
+    saveDifficultyConfig(newConfig);
+    settingsModal.classList.add('hidden');
+    showNotification("⚙️ 설정이 저장되었습니다.");
+}
+
+function resetSettings() {
+    if (confirm("설정을 기본값으로 초기화하시겠습니까?")) {
+        saveDifficultyConfig({ ...DEFAULT_DIFFICULTY_CONFIG });
+        openSettingsModal(); // Refresh modal values
+        showNotification("⚙️ 설정이 초기화되었습니다.");
+    }
+}
+
+function updateTotalQuestionsDisplay() {
+    const easy = parseInt(document.getElementById('easy-count').value, 10) || 0;
+    const medium = parseInt(document.getElementById('medium-count').value, 10) || 0;
+    const hard = parseInt(document.getElementById('hard-count').value, 10) || 0;
+    const total = easy + medium + hard;
+    document.getElementById('total-questions-display').innerText = `총 ${total} 문제`;
 }
